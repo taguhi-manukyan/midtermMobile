@@ -1,175 +1,155 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => NoteProvider(),
-      child: const MyApp(),
-    ),
-  );
+  runApp(MainApp());
 }
 
-class Note {
-  String content;
-  Note(this.content);
+class TaskItem{
+  String subj;
+  String desc;
+  DateTime due;
+  bool done;
+  TaskItem({required this.subj, required this.desc, required this.due, this.done=false});
 }
 
-class NoteProvider extends ChangeNotifier {
-  final List<Note> _notes = [];
-
-  List<Note> get notes => _notes;
-
-  void addNote(String content) {
-    if (content.trim().isNotEmpty) {
-      _notes.insert(0, Note(content));
-      notifyListeners();
-    }
+class TaskManager extends Cubit<List<TaskItem>>{
+  TaskManager():super([]);
+  void addTask(t){
+    emit([...state, t]);
   }
-
-  void updateNote(int index, String newContent) {
-    if (newContent.trim().isNotEmpty && index >= 0 && index < _notes.length) {
-      _notes[index].content = newContent;
-      notifyListeners();
-    }
+  void toggleDone(i){
+    var l = List<TaskItem>.from(state);
+    l[i].done = !l[i].done;
+    emit(l);
   }
 }
 
-
-final _router = GoRouter(
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const NotesListPage(),
-    ),
-    GoRoute(
-      path: '/create',
-      builder: (context, state) => const CreateNotePage(),
-    ),
-    GoRoute(
-      path: '/edit/:index',
-      builder: (context, state) {
-        final index = int.tryParse(state.pathParameters['index'] ?? '-1') ?? -1;
-        return CreateNotePage(editIndex: index);
-      },
-    ),
-  ],
+GoRouter appRouter = GoRouter(
+    routes: [
+      GoRoute(path:'/', builder:(c,s)=>TaskListPage()),
+      GoRoute(path:'/add', builder:(c,s)=>AddTaskPage()),
+    ]
 );
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+class MainApp extends StatelessWidget{
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Notes App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      routerConfig: _router,
+  Widget build(BuildContext context){
+    return BlocProvider(
+      create: (_)=>TaskManager(),
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner:false,
+        routerConfig:appRouter,
+        title:'Homework Tracker',
+        theme: ThemeData(
+          useMaterial3:true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
+          appBarTheme: AppBarTheme(backgroundColor: Colors.purple[200], foregroundColor:Colors.white),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor:Colors.purple[200], foregroundColor:Colors.white),
+          checkboxTheme: CheckboxThemeData(fillColor: MaterialStatePropertyAll(Colors.purple[200])),
+          cardTheme: CardThemeData(
+            elevation:4,
+            shadowColor: Colors.purple.withOpacity(0.3),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),),
     );
-  }
-}
+  }}
 
-class NotesListPage extends StatelessWidget {
-  const NotesListPage({super.key});
-
+class TaskListPage extends StatelessWidget{
   @override
-  Widget build(BuildContext context) {
-    final notes = context.watch<NoteProvider>().notes;
-
+  Widget build(BuildContext context){
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Notes'),
-      ),
-      body: notes.isEmpty
-          ? const Center(child: Text('No notes yet. Tap + to add one!'))
-          : ListView.builder(
-        itemCount: notes.length,
-        itemBuilder: (context, index) => ListTile(
-          leading: const Icon(Icons.note),
-          title: Text(notes[index].content),
-          onTap: () {
-            context.push('/edit/$index');
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/create'),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class CreateNotePage extends StatefulWidget {
-  final int? editIndex;
-
-  const CreateNotePage({super.key, this.editIndex});
-
-  @override
-  State<CreateNotePage> createState() => _CreateNotePageState();
-}
-
-class _CreateNotePageState extends State<CreateNotePage> {
-  final _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.editIndex != null) {
-      final notes = context.read<NoteProvider>().notes;
-      if (widget.editIndex! >= 0 && widget.editIndex! < notes.length) {
-        _controller.text = notes[widget.editIndex!].content;
-      }
-    }
-  }
-
-  void _saveNote() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-
-    final provider = context.read<NoteProvider>();
-
-    if (widget.editIndex != null) {
-      provider.updateNote(widget.editIndex!, text);
-    } else {
-      provider.addNote(text);
-    }
-
-    context.pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.editIndex != null;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Note' : 'New Note'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: const InputDecoration(
-                hintText: 'Write your note here...',
-                border: OutlineInputBorder(),
+      appBar: AppBar(title:Text('Homework Tracker')),
+      body: BlocBuilder<TaskManager,List<TaskItem>>(builder:(context,list){
+        if(list.isEmpty) return Center(child: Text('No task added yet.'));
+        return ListView.builder(
+          itemCount:list.length,
+          itemBuilder:(c,i){
+            var item = list[i];
+            return Card(
+              color: item.done?Colors.green[50]:Colors.purple[50],
+              child: ListTile(
+                  title: Text(item.desc, style: TextStyle(decoration: item.done?TextDecoration.lineThrough:null)),
+                  subtitle: Column(
+                      crossAxisAlignment:CrossAxisAlignment.start,
+                      children:[
+                        Text(item.subj, style: TextStyle(color:Colors.purple[300])),
+                        Text('Due: ${item.due.toLocal().toString().split(' ')[0]}')
+                      ]
+                  ),
+                  trailing: Checkbox(
+                      value: item.done,
+                      onChanged:(_){context.read<TaskManager>().toggleDone(i);}
+                  ),
+                  onTap:(){context.read<TaskManager>().toggleDone(i);}
               ),
-              maxLines: null,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _saveNote,
-              icon: const Icon(Icons.save),
-              label: Text(isEditing ? 'Update Note' : 'Save Note'),
-            ),
-          ],
-        ),
+            );
+          },
+        );
+      }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: ()=>context.push('/add'),
+        child: Icon(Icons.add),
       ),
     );
   }
+}
+
+class AddTaskPage extends StatefulWidget{
+  @override
+  _AddTaskPageState createState()=>_AddTaskPageState();
+}
+
+class _AddTaskPageState extends State<AddTaskPage>{
+  var formK=GlobalKey<FormState>();
+  var subCtrl=TextEditingController();
+  var descCtrl=TextEditingController();
+  DateTime? selDate;
+
+  @override
+  Widget build(BuildContext context){
+    return Scaffold(
+      appBar: AppBar(title:Text('Add Homework')),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Form(
+          key:formK,
+          child: Column(
+            children:[
+              TextFormField(
+                controller:subCtrl,
+                decoration: InputDecoration(labelText:'Subject'),
+                validator:(v)=>v!.isEmpty?'Enter subject':null,
+              ),
+              SizedBox(height:10),
+              TextFormField(
+                controller:descCtrl,
+                decoration: InputDecoration(labelText:'Title'),
+                validator:(v)=>v!.isEmpty?'Enter title':null,
+              ),
+              SizedBox(height:10),
+              ElevatedButton(
+                onPressed:() async{
+                  var now = DateTime.now();
+                  var d = await showDatePicker(context:context, initialDate:now, firstDate:now, lastDate:DateTime(now.year+2));
+                  if(d!=null) setState(()=>selDate=d);
+                },
+                child: Text(selDate==null?'Select due date':'Due: ${selDate!.toLocal().toString().split(' ')[0]}'),
+              ),
+              Spacer(),
+              ElevatedButton(
+                onPressed:(){
+                  if(formK.currentState!.validate() && selDate!=null){
+                    var t = TaskItem(subj:subCtrl.text, desc:descCtrl.text, due:selDate!);
+                    context.read<TaskManager>().addTask(t);
+                    context.pop();
+                  }},
+                child: Text('Save it'),
+              ),
+            ],
+          ),
+        ),),
+    );}
 }
