@@ -11,7 +11,7 @@ class TaskItem{
   String desc;
   DateTime due;
   bool done;
-  TaskItem({required this.subj, required this.desc, required this.due, this.done=false});
+  TaskItem({required this.subj,required this.desc, required this.due, this.done=false});
 }
 
 class TaskManager extends Cubit<List<TaskItem>>{
@@ -23,8 +23,7 @@ class TaskManager extends Cubit<List<TaskItem>>{
     var l = List<TaskItem>.from(state);
     l[i].done = !l[i].done;
     emit(l);
-  }
-}
+  }}
 
 GoRouter appRouter = GoRouter(
     routes: [
@@ -45,9 +44,9 @@ class MainApp extends StatelessWidget{
         theme: ThemeData(
           useMaterial3:true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
-          appBarTheme: AppBarTheme(backgroundColor: Colors.purple[200], foregroundColor:Colors.white),
-          floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor:Colors.purple[200], foregroundColor:Colors.white),
-          checkboxTheme: CheckboxThemeData(fillColor: MaterialStatePropertyAll(Colors.purple[200])),
+          appBarTheme: AppBarTheme(backgroundColor: Colors.purple[200],foregroundColor:Colors.white),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor:Colors.purple[200],foregroundColor:Colors.white),
+          checkboxTheme: CheckboxThemeData(fillColor:MaterialStatePropertyAll(Colors.purple[200])),
           cardTheme: CardThemeData(
             elevation:4,
             shadowColor: Colors.purple.withOpacity(0.3),
@@ -85,8 +84,7 @@ class TaskListPage extends StatelessWidget{
                   ),
                   onTap:(){context.read<TaskManager>().toggleDone(i);}
               ),
-            );
-          },
+            );},
         );
       }),
       floatingActionButton: FloatingActionButton(
@@ -94,8 +92,7 @@ class TaskListPage extends StatelessWidget{
         child: Icon(Icons.add),
       ),
     );
-  }
-}
+  }}
 
 class AddTaskPage extends StatefulWidget{
   @override
@@ -134,8 +131,7 @@ class _AddTaskPageState extends State<AddTaskPage>{
                 onPressed:() async{
                   var now = DateTime.now();
                   var d = await showDatePicker(context:context, initialDate:now, firstDate:now, lastDate:DateTime(now.year+2));
-                  if(d!=null) setState(()=>selDate=d);
-                },
+                  if(d!=null) setState(()=>selDate=d);},
                 child: Text(selDate==null?'Select due date':'Due: ${selDate!.toLocal().toString().split(' ')[0]}'),
               ),
               Spacer(),
